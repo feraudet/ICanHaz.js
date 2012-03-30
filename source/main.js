@@ -3,11 +3,12 @@
 */
 /*global  */
 (function () {
-    function trim(stuff) {
-        if (''.trim) return stuff.trim();
-        else return stuff.replace(/^\s+/, '').replace(/\s+$/, '');
-    }
-    var ich = {
+        var trim = (function() {
+            return eval('typeof (new String).trim') === 'function'
+            ? function(stuff) { return (new String(stuff)).trim(); }
+            : function(stuff) { return (new String(stuff)).replace(/^\s+/, '').replace(/\s+$/, ''); }
+        }()),
+        ich = {
         VERSION: "@VERSION@",
         templates: {},
         
@@ -62,13 +63,23 @@
         grabTemplates: function () {        
             var i, 
                 scripts = document.getElementsByTagName('script'), 
-                script,
                 trash = [];
             for (i = 0, l = scripts.length; i < l; i++) {
-                script = scripts[i];
-                if (script && script.innerHTML && script.id && (script.type === "text/html" || script.type === "text/x-icanhaz")) {
-                    ich.addTemplate(script.id, trim(script.innerHTML));
-                    trash.unshift(script);
+                var script = scripts[i];
+                if (script && script.id && (script.type === "text/html" || script.type === "text/x-icanhaz")) {
+                    if (script.src) {
+                        var datas;
+                        $.ajax(script.src,
+                        {
+                            async: false,
+                            complete: function (r) {
+                                ich.addTemplate(script.id, trim(r.responseText));
+                            }
+                        });
+                    } else if (script.innerHTML) {
+                        this.addTemplate(script.id, trim(script.innerHTML));
+                    }
+                   trash.unshift(script);
                 }
             }
             for (i = 0, l = trash.length; i < l; i++) {
